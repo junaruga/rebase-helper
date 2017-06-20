@@ -358,31 +358,6 @@ class SpecFile(object):
                 self.spec_content[index] = mod_line
         self.save()
 
-    def _correct_rebased_patches(self, patch_num):
-        """
-        Comment out patches from SPEC file
-
-        :var patch_num: list with patch numbers to update
-        """
-        for index, line in enumerate(self.spec_content):
-            #  if patch is applied on the line, try to check if it should be commented out
-            if line.startswith('%patch'):
-                #  check patch numbers
-                for num in patch_num:
-                    #  if the line should be commented out
-                    if line.startswith('%patch{0}'.format(num)):
-                        patch_fields = line.strip().split()
-                        patch_fields = [x for x in patch_fields if not x.startswith('-p')]
-                        self.spec_content[index] = '{begin}\n#{line}{new_line}\n{end}\n'.format(
-                            begin=settings.BEGIN_COMMENT,
-                            line=line,
-                            new_line=' '.join(patch_fields) + ' -p1',
-                            end=settings.END_COMMENT,
-                        )
-                        #  remove the patch number from list
-                        patch_num.remove(num)
-                        break
-
     def write_updated_patches(self, patches, disable_inapplicable):
         """Function writes the patches to -rebase.spec file"""
         #  TODO: this method should not take whole kwargs as argument, take only what it needs.
@@ -430,7 +405,6 @@ class SpecFile(object):
         self._comment_out_patches(removed_patches)
         note = 'Disabled because of conflicts, please verify'
         self._comment_out_patches(inapplicable_patches, note=note)
-        self._correct_rebased_patches(modified_patches)
         #  save changes
         self.save()
 
