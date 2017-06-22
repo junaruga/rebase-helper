@@ -331,7 +331,7 @@ class SpecFile(object):
         """
         return self.patches['not_applied']
 
-    def _comment_out_patches(self, patch_num, note=None):
+    def _comment_out_patches(self, patch_num, note=None, remove_patches=False):
         """
         Comment out patches from SPEC file
 
@@ -344,8 +344,12 @@ class SpecFile(object):
                 for num in patch_num:
                     #  if the line should be commented out
                     if line.startswith('%patch{0}'.format(num)):
-                        comment = '# {}\n'.format(note) if note is not None else ''
-                        self.spec_content[index] = '{}#%{}'.format(comment, line)
+                        if remove_patches:
+                            # remove patch tag of a deleted patch from rebased spec file
+                            self.spec_content[index] = ''
+                        else:
+                            comment = '# {}\n'.format(note) if note is not None else ''
+                            self.spec_content[index] = '{}#%{}'.format(comment, line)
                         #  remove the patch number from list
                         patch_num.remove(num)
                         break
@@ -357,31 +361,6 @@ class SpecFile(object):
                 mod_line = re.sub(settings.REBASE_HELPER_REBASED_SOURCES_DIR + '/', '', line)
                 self.spec_content[index] = mod_line
         self.save()
-
-    def _correct_rebased_patches(self, patch_num):
-        """
-        Comment out patches from SPEC file
-
-        :var patch_num: list with patch numbers to update
-        """
-        for index, line in enumerate(self.spec_content):
-            #  if patch is applied on the line, try to check if it should be commented out
-            if line.startswith('%patch'):
-                #  check patch numbers
-                for num in patch_num:
-                    #  if the line should be commented out
-                    if line.startswith('%patch{0}'.format(num)):
-                        patch_fields = line.strip().split()
-                        patch_fields = [x for x in patch_fields if not x.startswith('-p')]
-                        self.spec_content[index] = '{begin}\n#{line}{new_line}\n{end}\n'.format(
-                            begin=settings.BEGIN_COMMENT,
-                            line=line,
-                            new_line=' '.join(patch_fields) + ' -p1',
-                            end=settings.END_COMMENT,
-                        )
-                        #  remove the patch number from list
-                        patch_num.remove(num)
-                        break
 
     def write_updated_patches(self, patches, disable_inapplicable):
         """Function writes the patches to -rebase.spec file"""
@@ -410,9 +389,13 @@ class SpecFile(object):
                     patch_inapplicable = [x for x in patches['inapplicable'] if patch_name in x]
                 else:
                     patch_inapplicable = None
-                if check_not_applied or patch_removed:
+                if check_not_applied:
                     self.spec_content[index] = '#{0} {1}\n'.format(' '.join(fields[:-1]),
                                                                    os.path.basename(patch_name))
+                elif patch_removed:
+                    # Delete the patch line as the patch will not be used
+                    self.spec_content[index] = ''
+
                     if patch_removed:
                         self.removed_patches.append(patch_name)
                         removed_patches.append(patch_num)
@@ -427,10 +410,9 @@ class SpecFile(object):
                     self.spec_content[index] = ' '.join(fields) + '\n'
                     modified_patches.append(patch_num)
 
-        self._comment_out_patches(removed_patches)
+        self._comment_out_patches(removed_patches, remove_patches=True)
         note = 'Disabled because of conflicts, please verify'
         self._comment_out_patches(inapplicable_patches, note=note)
-        self._correct_rebased_patches(modified_patches)
         #  save changes
         self.save()
 
