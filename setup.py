@@ -67,7 +67,9 @@ setup(
             'pypi_url_fix = rebasehelper.spec_hooks.pypi_url_fix:PyPIURLFixHook',
         ]
     },
-    setup_requires=[],
+    setup_requires=[
+        # 'pytest-runner',
+    ],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
