@@ -81,7 +81,7 @@ setup(
     },
     install_requires=[
         # This installs the rpm package if not already present
-        'rpm-py-installer',
+        'rpm-py-installer==0.5.0.dev1',
         'backports.lzma;python_version<"3.3"',
         'copr',
         'pyquery',
