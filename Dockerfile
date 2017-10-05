@@ -36,8 +36,6 @@ RUN dnf -y install \
   pkgdiff \
   dnf \
   dnf-plugins-core \
-  # needed by rpm-py-installer.
-  rpm-devel \
   && dnf clean all
 
 CMD ["/usr/bin/tox"]
